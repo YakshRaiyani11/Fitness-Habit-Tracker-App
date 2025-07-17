@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const ThemeContext = createContext();
 
+// eslint-disable-next-line react/prop-types
 export const ThemeProvider = ({ children }) => {
   const [dark, setDark] = useState(false);
 

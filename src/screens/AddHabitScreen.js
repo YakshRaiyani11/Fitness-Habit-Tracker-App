@@ -29,26 +29,6 @@ export default function AddHabitScreen() {
     });
   }, []);
 
-  const scheduleNotification = async (habitId, name, time) => {
-    const trigger = new Date(time);
-    if (trigger < new Date()) {
-      trigger.setDate(trigger.getDate() + 1); // shift to next day if past
-    }
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `${name}`,
-        body: `⏰ It's time for your habit: ${name}`,
-        sound: Platform.OS === "android" ? "alarm" : undefined,
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger: {
-        hour: trigger.getHours(),
-        minute: trigger.getMinutes(),
-        repeats: true,
-      },
-    });
-  };
 
   const handleAddHabit = async () => {
     if (!habitName.trim()) {

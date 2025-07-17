@@ -5,7 +5,7 @@ import * as Notifications from "expo-notifications";
 import { ThemeContext } from "../context/ThemeContext";
 import { scheduleDailyNotification } from "../utils/notifications";
 export default function SettingsScreen() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [ setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { dark, toggleTheme } = useContext(ThemeContext);
   useEffect(() => {
@@ -19,15 +19,6 @@ export default function SettingsScreen() {
     setNotificationsEnabled(notify === "true");
   };
 
-  const toggleDarkMode = async () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    await AsyncStorage.setItem("theme", newMode ? "dark" : "light");
-    Alert.alert(
-      "Theme updated",
-      `Switched to ${newMode ? "Dark" : "Light"} mode.`,
-    );
-  };
 
   const toggleNotifications = async () => {
     const newVal = !notificationsEnabled;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext, useEffect } from 'react';
+import React, { useState, useCallback, useContext } from "react";
 import {
   View,
   Text,
@@ -7,48 +7,65 @@ import {
   Alert,
   TextInput,
   Image,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-import { ThemeContext } from '../context/ThemeContext';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { AnimatedCircularProgress } from 'react-native-circular-progress';
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { ThemeContext } from "../context/ThemeContext";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { AnimatedCircularProgress } from "react-native-circular-progress";
 
-const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const getFormattedDate = (offset = 0) => {
   const d = new Date();
   d.setDate(d.getDate() - offset);
-  return d.toISOString().split('T')[0];
+  return d.toISOString().split("T")[0];
 };
 
 export default function HomeScreen() {
   const [habits, setHabits] = useState([]);
   const [editingHabitId, setEditingHabitId] = useState(null);
-  const [editedName, setEditedName] = useState('');
+  const [editedName, setEditedName] = useState("");
   const [dailyProgress, setDailyProgress] = useState({});
   const today = getFormattedDate(0);
   const { dark } = useContext(ThemeContext);
 
-  // 🧠 Load habits + dailyProgress from AsyncStorage
   const loadData = async () => {
-    const habitsData = await AsyncStorage.getItem('habits');
-    const progressData = await AsyncStorage.getItem('dailyProgress');
-    setHabits(habitsData ? JSON.parse(habitsData) : []);
-    setDailyProgress(progressData ? JSON.parse(progressData) : {});
+    try {
+      const habitsData = await AsyncStorage.getItem("habits");
+      const progressData = await AsyncStorage.getItem("dailyProgress");
+      const parsedHabits = habitsData ? JSON.parse(habitsData) : [];
+      const parsedProgress = progressData ? JSON.parse(progressData) : {};
+      console.log("🟢 Loaded Habits:", parsedHabits);
+      console.log("🟢 Loaded Progress:", parsedProgress);
+      setHabits(parsedHabits);
+      setDailyProgress(parsedProgress);
+    } catch (error) {
+      console.error("❌ Error loading data:", error);
+    }
   };
 
   const saveData = async (updatedHabits, updatedProgress) => {
-    setHabits(updatedHabits);
-    setDailyProgress(updatedProgress);
-    await AsyncStorage.setItem('habits', JSON.stringify(updatedHabits));
-    await AsyncStorage.setItem('dailyProgress', JSON.stringify(updatedProgress));
+    try {
+      setHabits(updatedHabits);
+      setDailyProgress(updatedProgress);
+      await AsyncStorage.setItem("habits", JSON.stringify(updatedHabits));
+      await AsyncStorage.setItem(
+        "dailyProgress",
+        JSON.stringify(updatedProgress)
+      );
+    } catch (error) {
+      console.error("❌ Error saving data:", error);
+    }
   };
 
-  useFocusEffect(useCallback(() => { loadData(); }, []));
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
-  // ✅ Toggle check-in for a habit today
   const toggleCheckIn = async (id) => {
     const updatedHabits = habits.map((habit) => {
       if (habit.id === id) {
@@ -59,8 +76,8 @@ export default function HomeScreen() {
       return habit;
     });
 
-    // 👇 Update dailyProgress
-    const checkedCount = updatedHabits.filter(h => h.history?.[today]).length;
+    const checkedCount = updatedHabits.filter((h) => h.history?.[today])
+      .length;
     const total = updatedHabits.length;
 
     const updatedProgress = {
@@ -75,16 +92,15 @@ export default function HomeScreen() {
     let streak = 0;
     for (let i = 0; i < 7; i++) {
       const day = getFormattedDate(i);
-      if (history[day]) streak++;
-      else break;
+      if (history?.[day] === true) {
+        streak++;
+      } else {
+        break;
+      }
     }
     return streak;
   };
 
-  const handleEditHabit = (id, name) => {
-    setEditingHabitId(id);
-    setEditedName(name);
-  };
 
   const saveEditedHabit = async () => {
     const updated = habits.map((habit) =>
@@ -92,21 +108,22 @@ export default function HomeScreen() {
     );
     saveData(updated, dailyProgress);
     setEditingHabitId(null);
-    setEditedName('');
+    setEditedName("");
   };
 
   const handleDeleteHabit = (id) => {
-    Alert.alert('Delete Habit', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Delete Habit", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: () => {
-          const updatedHabits = habits.filter(h => h.id !== id);
-          const checked = updatedHabits.filter(h => h.history?.[today]).length;
+          const updatedHabits = habits.filter((h) => h.id !== id);
+          const checked = updatedHabits.filter((h) => h.history?.[today])
+            .length;
           const updatedProgress = {
             ...dailyProgress,
-            [today]: { completed: checked, total: updatedHabits.length }
+            [today]: { completed: checked, total: updatedHabits.length },
           };
           saveData(updatedHabits, updatedProgress);
         },
@@ -123,18 +140,26 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className={`flex-1 ${dark ? 'bg-black' : 'bg-white'}`}>
-      {/* Header Banner */}
-      <LinearGradient colors={['#4c669f', '#3b5998', '#192f6a']} className="mt-10 px-4 py-6 rounded-b-3xl">
+    <View className={`flex-1 ${dark ? "bg-black" : "bg-white"}`}>
+      <LinearGradient
+        colors={["#4c669f", "#3b5998", "#192f6a"]}
+        className="mt-10 px-4 py-6 "
+      >
         <BlurView intensity={50} className="rounded-xl p-4">
           <View className="flex-row items-center">
             <Image
-              source={{ uri: 'https://img.freepik.com/free-vector/fitness-banner_23-2147736128.jpg' }}
-              className="w-14 h-14 rounded-full mr-3"
+              source={{
+                uri: "https://img.freepik.com/free-vector/fitness-banner_23-2147736128.jpg",
+              }}
+              className="w-14 h-14  mr-3"
             />
             <View>
-              <Text className="text-white text-xl font-bold">Good Morning 👋</Text>
-              <Text className="text-white text-sm">Crush your goals today!</Text>
+              <Text className="text-white text-xl font-bold">
+                Good Morning 👋
+              </Text>
+              <Text className="text-white text-sm">
+                Crush your goals today!
+              </Text>
             </View>
             <View className="ml-auto bg-white/20 px-3 py-1 rounded-full">
               <Text className="text-white font-semibold">🔥 Streak</Text>
@@ -143,34 +168,79 @@ export default function HomeScreen() {
         </BlurView>
       </LinearGradient>
 
-      {/* Motivation */}
-      <View className="px-4 mt-4">
-        <LinearGradient colors={['#89f7fe', '#66a6ff']} className="rounded-xl p-4 shadow">
-          <Text className="text-white font-semibold text-lg">Stay Consistent. You Got This! 💥</Text>
+      <View className="px-4 mt-2">
+        <LinearGradient
+          colors={["#89f7fe", "#66a6ff"]}
+          className="rounded-xl p-4 shadow"
+        >
+          <Text className="text-white font-semibold text-lg">
+            Stay Consistent. You Got This! 💥
+          </Text>
         </LinearGradient>
       </View>
 
       {/* Weekly Progress Rings */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4 px-4">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="mt-4 px-4"
+      >
         {getWeeklyDates().map((date) => {
-          const data = dailyProgress[date] || { completed: 0, total: habits.length || 1 };
-          const percent = (data.completed / data.total) * 100;
+  const progress = dailyProgress?.[date];
+  let completed = 0;
+  let total = habits.length;
 
-          return (
-            <View key={date} className="items-center mx-2">
-              <AnimatedCircularProgress
-                size={44}
-                width={5}
-                fill={percent}
-                tintColor="#395366"
-                backgroundColor="#e5e7eb"
-              >
-                {() => <Text className="text-xs">{Math.round(percent)}%</Text>}
-              </AnimatedCircularProgress>
-              <Text className="text-xs mt-1">{getDayName(date)}</Text>
-            </View>
-          );
-        })}
+  if (progress) {
+    completed = typeof progress.completed === "number" ? progress.completed : 0;
+    total = typeof progress.total === "number" && progress.total > 0 ? progress.total : habits.length;
+  }
+
+  // Prevent 0/0
+  const rawPercent = total > 0 ? (completed / total) * 100 : 0;
+  const safePercent = isNaN(rawPercent) ? 0 : rawPercent;
+
+  console.log(`📅 ${date} - completed: ${completed}, total: ${total}, percent: ${safePercent}`);
+
+  return (
+    <View key={date} className="items-center mx-2">
+      {/* <View key={date} className="items-center mx-2">
+  <View className="w-11 h-11 rounded-full bg-blue-200 justify-center items-center">
+    <Text className="text-xs font-semibold text-blue-900">50%</Text>
+  </View>
+  <Text className="text-xs mt-1">{getDayName(date)}</Text>
+</View> */}
+
+<AnimatedCircularProgress
+  size={44}            // ✅ explicitly set
+  width={5}            // ✅ explicitly set (stroke width)
+  fill={Math.min(Math.max(Number(safePercent) || 0, 0), 100)}  // ✅ clamp 0–100
+  tintColor="#395366"
+  backgroundColor="#e5e7eb"
+>
+  {() => (
+    <Text className="text-xs">
+      {Math.round(safePercent)}%
+    </Text>
+  )}
+</AnimatedCircularProgress>
+
+      {/* <AnimatedCircularProgress
+        size={44}
+        fill={safePercent}
+        tintColor="#395366"
+        backgroundColor="#e5e7eb"
+      >
+        {() => (
+          <Text className="text-xs">
+            {Math.round(safePercent)}%
+          </Text>
+        )}
+      </AnimatedCircularProgress> */}
+      <Text className="text-xs mt-1">{getDayName(date)}</Text>
+    </View>
+  );
+})}
+
       </ScrollView>
 
       {/* Habits List */}
@@ -183,9 +253,8 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={habit.id}
               onPress={() => toggleCheckIn(habit.id)}
-              // onLongPress={() => handleEditHabit(habit.id, habit.name)}
               onLongPress={() => handleDeleteHabit(habit.id, habit.name)}
-              className={`p-4 mb-3 rounded-2xl ${checkedToday ? 'bg-blue-200' : dark ? 'bg-slate-800' : 'bg-gray-100'}`}
+              className={`p-4 mb-3 rounded-2xl ${checkedToday ? "bg-blue-200" : dark ? "bg-slate-800" : "bg-gray-100"}`}
             >
               <View className="flex-row justify-between items-center">
                 {editingHabitId === habit.id ? (
@@ -198,7 +267,9 @@ export default function HomeScreen() {
                   />
                 ) : (
                   <>
-                    <Text className={`text-lg font-semibold ${dark ? 'text-white' : 'text-blue-900'}`}>
+                    <Text
+                      className={`text-lg font-semibold ${dark ? "text-white" : "text-blue-900"}`}
+                    >
                       {habit.name}
                     </Text>
                     <Text className="text-xs text-gray-500">{streak}🔥</Text>
@@ -212,6 +283,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-
-
