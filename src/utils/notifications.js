@@ -1,53 +1,56 @@
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+// utils/notification.js
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
-// Set default notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Call this in App.js once 
+export const configureNotifications = async () => {
+  await Notifications.requestPermissionsAsync();
 
-// 📌 One-time notification (e.g., 5 minutes from now)
-export const scheduleOneTimeNotification = async () => {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "Habit Reminder",
-      body: "Time to check in your habit!",
-      sound: true,
-    },
-    trigger: {
-      seconds: 300, // 5 minutes
-      channelId: "reminder-alarm", // (Android only)
-    },
+  if (Platform.OS === 'android' ? 'alarm' : true) {
+    await Notifications.setNotificationChannelAsync('habit-reminders', {
+      name: 'Habit Reminders',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'audio.mp3',
+    });
+  }
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
   });
 };
 
-// 📌 Daily repeating notification at specific time
-export const scheduleDailyReminder = async (habitName, time) => {
-  const triggerTime = new Date(time);
-  if (triggerTime < new Date()) {
-    triggerTime.setDate(triggerTime.getDate() + 1); // Shift to next day if past
+// Schedule daily notification at a specific time
+export const scheduleDailyReminder = async (title, hour, minute) => {
+  const now = new Date();
+
+  const trigger = new Date();
+  trigger.setHours(hour);
+  trigger.setMinutes(minute);
+  trigger.setSeconds(0);
+
+  // 🔁 If time already passed today, schedule for tomorrow
+  if (trigger <= now) {
+    trigger.setDate(trigger.getDate() + 1);
   }
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: `${habitName}`,
-      body: `⏰ It's time for your habit: ${habitName}`,
-      sound: Platform.OS === "android" ? "alarm" : true,
-      priority: Notifications.AndroidNotificationPriority.HIGH,
+      title,
+      body: `⏰ Time for your habit: ${title}`,
+      sound: 'audio.mp3',
+      channelId: 'habit-reminders',
     },
-    trigger: {
-      hour: triggerTime.getHours(),
-      minute: triggerTime.getMinutes(),
-      repeats: true,
-    },
+    trigger, // ← Now using full Date object
   });
+
+  console.log('✅ Notification scheduled for:', trigger.toString());
 };
 
-// 📌 Optional: cancel all scheduled notifications
-export const cancelAllNotifications = async () => {
+// Optional: Cancel all notifications (for dev/debug)
+export const cancelAllReminders = async () => {
   await Notifications.cancelAllScheduledNotificationsAsync();
 };

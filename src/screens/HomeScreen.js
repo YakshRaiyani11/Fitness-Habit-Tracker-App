@@ -37,8 +37,8 @@ export default function HomeScreen() {
       const progressData = await AsyncStorage.getItem("dailyProgress");
       const parsedHabits = habitsData ? JSON.parse(habitsData) : [];
       const parsedProgress = progressData ? JSON.parse(progressData) : {};
-      console.log("🟢 Loaded Habits:", parsedHabits);
-      console.log("🟢 Loaded Progress:", parsedProgress);
+      console.log(" Loaded Habits:", parsedHabits);
+      console.log(" Loaded Progress:", parsedProgress);
       setHabits(parsedHabits);
       setDailyProgress(parsedProgress);
     } catch (error) {
@@ -76,8 +76,7 @@ export default function HomeScreen() {
       return habit;
     });
 
-    const checkedCount = updatedHabits.filter((h) => h.history?.[today])
-      .length;
+    const checkedCount = updatedHabits.filter((h) => h.history?.[today]).length;
     const total = updatedHabits.length;
 
     const updatedProgress = {
@@ -101,7 +100,6 @@ export default function HomeScreen() {
     return streak;
   };
 
-
   const saveEditedHabit = async () => {
     const updated = habits.map((habit) =>
       habit.id === editingHabitId ? { ...habit, name: editedName } : habit
@@ -119,8 +117,9 @@ export default function HomeScreen() {
         style: "destructive",
         onPress: () => {
           const updatedHabits = habits.filter((h) => h.id !== id);
-          const checked = updatedHabits.filter((h) => h.history?.[today])
-            .length;
+          const checked = updatedHabits.filter(
+            (h) => h.history?.[today]
+          ).length;
           const updatedProgress = {
             ...dailyProgress,
             [today]: { completed: checked, total: updatedHabits.length },
@@ -130,7 +129,16 @@ export default function HomeScreen() {
       },
     ]);
   };
-
+  const formatReminderTime = (isoTime) => {
+    if (!isoTime) return null;
+    const date = new Date(isoTime);
+    return isNaN(date.getTime())
+      ? null
+      : date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+  };
   const getWeeklyDates = () => {
     return Array.from({ length: 7 }, (_, i) => getFormattedDate(6 - i));
   };
@@ -178,108 +186,106 @@ export default function HomeScreen() {
           </Text>
         </LinearGradient>
       </View>
+      <View className="flex-1 bg-white">
+        {/* Weekly Progress Rings */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-4 px-4"
+        >
+          {getWeeklyDates().map((date) => {
+            const progress = dailyProgress?.[date];
+            let completed = 0;
+            let total = habits.length;
 
-      {/* Weekly Progress Rings */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="mt-4 px-4"
-      >
-        {getWeeklyDates().map((date) => {
-  const progress = dailyProgress?.[date];
-  let completed = 0;
-  let total = habits.length;
+            if (progress) {
+              completed =
+                typeof progress.completed === "number" ? progress.completed : 0;
+              total =
+                typeof progress.total === "number" && progress.total > 0
+                  ? progress.total
+                  : habits.length;
+            }
 
-  if (progress) {
-    completed = typeof progress.completed === "number" ? progress.completed : 0;
-    total = typeof progress.total === "number" && progress.total > 0 ? progress.total : habits.length;
-  }
+            // Prevent 0/0
+            const rawPercent = total > 0 ? (completed / total) * 100 : 0;
+            const safePercent = isNaN(rawPercent) ? 0 : rawPercent;
 
-  // Prevent 0/0
-  const rawPercent = total > 0 ? (completed / total) * 100 : 0;
-  const safePercent = isNaN(rawPercent) ? 0 : rawPercent;
+            console.log(
+              ` ${date} - completed: ${completed}, total: ${total}, percent: ${safePercent}`
+            );
 
-  console.log(`📅 ${date} - completed: ${completed}, total: ${total}, percent: ${safePercent}`);
-
-  return (
-    <View key={date} className="items-center mx-2">
-      {/* <View key={date} className="items-center mx-2">
-  <View className="w-11 h-11 rounded-full bg-blue-200 justify-center items-center">
-    <Text className="text-xs font-semibold text-blue-900">50%</Text>
-  </View>
-  <Text className="text-xs mt-1">{getDayName(date)}</Text>
-</View> */}
-
-<AnimatedCircularProgress
-  size={44}            // ✅ explicitly set
-  width={5}            // ✅ explicitly set (stroke width)
-  fill={Math.min(Math.max(Number(safePercent) || 0, 0), 100)}  // ✅ clamp 0–100
-  tintColor="#395366"
-  backgroundColor="#e5e7eb"
->
-  {() => (
-    <Text className="text-xs">
-      {Math.round(safePercent)}%
-    </Text>
-  )}
-</AnimatedCircularProgress>
-
-      {/* <AnimatedCircularProgress
-        size={44}
-        fill={safePercent}
-        tintColor="#395366"
-        backgroundColor="#e5e7eb"
-      >
-        {() => (
-          <Text className="text-xs">
-            {Math.round(safePercent)}%
-          </Text>
-        )}
-      </AnimatedCircularProgress> */}
-      <Text className="text-xs mt-1">{getDayName(date)}</Text>
-    </View>
-  );
-})}
-
-      </ScrollView>
-
-      {/* Habits List */}
-      <ScrollView className="px-4 mt-5 ">
-        {habits.map((habit) => {
-          const checkedToday = habit.history?.[today] || false;
-          const streak = calculateStreak(habit.history);
-
-          return (
-            <TouchableOpacity
-              key={habit.id}
-              onPress={() => toggleCheckIn(habit.id)}
-              onLongPress={() => handleDeleteHabit(habit.id, habit.name)}
-              className={`p-4 mb-3 rounded-2xl ${checkedToday ? "bg-blue-200" : dark ? "bg-slate-800" : "bg-gray-100"}`}
-            >
-              <View className="flex-row justify-between items-center">
-                {editingHabitId === habit.id ? (
-                  <TextInput
-                    value={editedName}
-                    onChangeText={setEditedName}
-                    onSubmitEditing={saveEditedHabit}
-                    className="text-base font-semibold bg-white px-2 py-1 rounded w-full"
-                    autoFocus
-                  />
-                ) : (
-                  <>
-                    <Text
-                      className={`text-lg font-semibold ${dark ? "text-white" : "text-blue-900"}`}
-                    >
-                      {habit.name}
-                    </Text>
-                    <Text className="text-xs text-gray-500">{streak}🔥</Text>
-                  </>
-                )}
+            return (
+              <View key={date} className="items-center mx-2 mb-4">
+                <AnimatedCircularProgress
+                  size={44} // ✅ explicitly set
+                  width={5} // ✅ explicitly set (stroke width)
+                  fill={Math.min(Math.max(Number(safePercent) || 0, 0), 100)} // ✅ clamp 0–100
+                  tintColor="#395366"
+                  backgroundColor="#e5e7eb"
+                >
+                  {() => (
+                    <Text className="text-xs">{Math.round(safePercent)}%</Text>
+                  )}
+                </AnimatedCircularProgress>
+                <Text className="text-xs mt-1">{getDayName(date)}</Text>
               </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+
+        {/* Habits List */}
+        <ScrollView className="px-4 mt-4 ">
+          {habits.map((habit) => {
+            const checkedToday = habit.history?.[today] || false;
+            const streak = calculateStreak(habit.history);
+
+            return (
+              <TouchableOpacity
+                key={habit.id}
+                onPress={() => toggleCheckIn(habit.id)}
+                onLongPress={() => handleDeleteHabit(habit.id, habit.name)}
+                className={`p-4 mb-3 rounded-2xl ${
+                  checkedToday
+                    ? "bg-blue-200"
+                    : dark
+                    ? "bg-slate-800"
+                    : "bg-gray-100"
+                }`}
+              >
+                <View className="flex-row justify-between items-center">
+                  {editingHabitId === habit.id ? (
+                    <TextInput
+                      value={editedName}
+                      onChangeText={setEditedName}
+                      onSubmitEditing={saveEditedHabit}
+                      className="text-base font-semibold bg-white px-2 py-1 rounded w-full"
+                      autoFocus
+                    />
+                  ) : (
+                    <>
+                      <Text
+                        className={` flex-row justify-between items-center text-lg font-semibold mb-1 ${
+                          dark ? "text-white" : "text-blue-900"
+                        }`}
+                      > 
+                        {habit.name}
+                      </Text>
+                      {habit.reminderTime && formatReminderTime(habit.reminderTime)&&(
+                        <Text className="text-sm text-gray-500 mt-1">
+                          ⏰ Reminder: {formatReminderTime(habit.reminderTime)}
+                        </Text>
+                      )}
+
+                      <Text className="text-xs text-gray-500">{streak}🔥</Text>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
     </View>
   );
 }

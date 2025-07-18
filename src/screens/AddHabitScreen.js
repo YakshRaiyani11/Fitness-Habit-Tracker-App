@@ -1,79 +1,55 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   Alert,
-  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import * as Notifications from "expo-notifications";
+import { scheduleDailyReminder } from '../utils/notifications';
 
 export default function AddHabitScreen() {
   const [habitName, setHabitName] = useState("");
   const [reminderTime, setReminderTime] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const navigation = useNavigation();
-
-  useEffect(() => {
-    Notifications.requestPermissionsAsync();
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    });
-  }, []);
-
-
   const handleAddHabit = async () => {
-    if (!habitName.trim()) {
-      Alert.alert("Please enter a habit name");
-      return;
-    }
+  if (!habitName.trim()) {
+    Alert.alert('Please enter a habit name');
+    return;
+  }
 
-    try {
-      const storedHabits = await AsyncStorage.getItem("habits");
-      const habits = storedHabits ? JSON.parse(storedHabits) : [];
+  const hour = reminderTime.getHours();
+  const minute = reminderTime.getMinutes();
 
-      const newHabit = {
-        id: Date.now().toString(),
-        name: habitName,
-        completed: false,
-        reminder: reminderTime.toISOString(),
-        history: [],
-      };
+// ✅ Subtract 1 minute to compensate for OS delay
+let adjustedHour = hour;
+let adjustedMinute = minute - 1;
 
-      const updatedHabits = [...habits, newHabit];
-      await AsyncStorage.setItem("habits", JSON.stringify(updatedHabits));
-
-      // ✅ 📢 Schedule notification at the selected time
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `${habitName}`,
-          body: `⏰ It's time for your habit: ${habitName}`,
-          sound: Platform.OS === "android" ? "alarm" : undefined,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-        },
-        trigger: {
-          hour: reminderTime.getHours(),
-          minute: reminderTime.getMinutes(),
-          repeats: true, // Repeat daily
-        },
-      });
-
-      setHabitName("");
-      Alert.alert("Success", "Habit and reminder added!");
-      navigation.navigate("Home");
-    } catch (error) {
-      console.error("Failed to add habit", error);
-      Alert.alert("Error adding habit");
-    }
+if (adjustedMinute < 0) {
+  adjustedMinute = 59;
+  adjustedHour = adjustedHour === 0 ? 23 : adjustedHour - 1;
+}
+  // Save to AsyncStorage (optional)
+  const newHabit = {
+    id: Date.now().toString(),
+    name: habitName,
+    reminderTime: new Date(reminderTime).toISOString(),
   };
+  const stored = await AsyncStorage.getItem('habits');
+  const habits = stored ? JSON.parse(stored) : [];
+  await AsyncStorage.setItem('habits', JSON.stringify([...habits, newHabit]));
+
+  // Schedule Notification
+  await scheduleDailyReminder(habitName, adjustedHour, adjustedMinute);
+
+  Alert.alert('Success', 'Habit added with daily reminder!');
+  navigation.navigate('Home');
+};
+
 
   return (
     <View className="flex-1 bg-white px-6 pt-10">

@@ -2,20 +2,13 @@ import React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ThemeProvider } from "./src/context/ThemeContext";
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
-
-if (Platform.OS === "android") {
-  Notifications.setNotificationChannelAsync("reminder-alarm", {
-    name: "Reminder Alarm",
-    importance: Notifications.AndroidImportance.HIGH,
-    sound: "default", // Use custom sound if you want
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#FF231F7C",
-  });
-}
-
+import { useEffect } from 'react';
+import { configureNotifications } from './src/utils/notifications';
 export default function App() {
+  useEffect(() => {
+    configureNotifications(); // 🔔 Setup channels + permissions
+  }, []);
+
   return (
     <ThemeProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
